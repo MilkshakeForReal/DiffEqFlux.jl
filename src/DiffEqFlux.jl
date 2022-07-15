@@ -55,7 +55,7 @@ Flux.device(::FastLayer) = @warn "device(f::FastLayer) is a no-op: to move FastC
 Flux.gpu(::FastLayer) = @warn "device(f::FastLayer) is a no-op: to move FastChain computations to a GPU, apply gpu(x) to the weight vector"
 Flux.cpu(::FastLayer) = @warn "device(f::FastLayer) is a no-op: to move FastChain computations to a CPU, apply cpu(x) to the weight vector"
 
-export DeterministicCNF, FFJORD, NeuralODE, NeuralDSDE, NeuralSDE, NeuralCDDE, NeuralDAE, NeuralODEMM, TensorLayer, AugmentedNDELayer, SplineLayer, NeuralHamiltonianDE
+export DeterministicCNF, FFJORD, NeuralODE, NeuralDSDE, NeuralSDE, NeuralCDDE, NeuralDAE, NeuralODEMM, TensorLayer, AugmentedNDELayer, SplineLayer, NeuralHamiltonianDE, NeuralLagrangianDE
 export HamiltonianNN
 export ChebyshevBasis, SinBasis, CosBasis, FourierBasis, LegendreBasis, PolynomialBasis
 export FastDense, StaticDense, FastChain, initial_params
