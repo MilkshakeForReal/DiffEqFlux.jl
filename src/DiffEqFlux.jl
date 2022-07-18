@@ -24,7 +24,7 @@ gpu_or_cpu(x) = Array
 # ForwardDiff integration
 
 ZygoteRules.@adjoint function ForwardDiff.Dual{T}(x, ẋ::Tuple) where T
-  @assert length(ẋ) == 1
+#  @assert length(ẋ) == 1
   ForwardDiff.Dual{T}(x, ẋ), ḋ -> (ḋ.partials[1], (ḋ.value,))
 end
 
@@ -49,6 +49,7 @@ include("tensor_product_basis.jl")
 include("tensor_product_layer.jl")
 include("collocation.jl")
 include("hnn.jl")
+include("lnn.jl")
 include("multiple_shooting.jl")
 
 Flux.device(::FastLayer) = @warn "device(f::FastLayer) is a no-op: to move FastChain computations to a GPU, apply gpu(x) to the weight vector"
@@ -56,7 +57,7 @@ Flux.gpu(::FastLayer) = @warn "device(f::FastLayer) is a no-op: to move FastChai
 Flux.cpu(::FastLayer) = @warn "device(f::FastLayer) is a no-op: to move FastChain computations to a CPU, apply cpu(x) to the weight vector"
 
 export DeterministicCNF, FFJORD, NeuralODE, NeuralDSDE, NeuralSDE, NeuralCDDE, NeuralDAE, NeuralODEMM, TensorLayer, AugmentedNDELayer, SplineLayer, NeuralHamiltonianDE, NeuralLagrangianDE
-export HamiltonianNN
+export HamiltonianNN, LagrangianNN
 export ChebyshevBasis, SinBasis, CosBasis, FourierBasis, LegendreBasis, PolynomialBasis
 export FastDense, StaticDense, FastChain, initial_params
 export FFJORDDistribution
