@@ -1,16 +1,23 @@
 using DiffEqFlux, OrdinaryDiffEq, ReverseDiff, Test, Lux, Random
 
+function main()
 # Checks for Shapes and Non-Zero Gradients
-u0 = rand(Float32, 6)
+    u0 = rand(Float32, 6)
 
-lnn = LagrangianNN(Lux.Chain(Lux.Dense(6, 12, softplus), Lux.Dense(12, 1)))
-ps, st = Lux.setup(Random.default_rng(), lnn)
+    lnn = LagrangianNN(Lux.Chain(Lux.Dense(6, 12, softplus), Lux.Dense(12, 1)))
+    ps, st = Lux.setup(Random.default_rng(), lnn)
 
-@test size(lnn(u0, ps, st)[1]) == (6,)
-@test size(lnn(u0, Lux.ComponentArray(ps), st)[1]) == (6,)
+    @test size(lnn(u0, ps, st)[1]) == (6,)
 
-@test ! iszero(Zygote.gradient(p -> sum(lnn(u0, p,st)[1]), ps))
+    ps = Lux.ComponentArray(ps)
+    @test size(lnn(u0, Lux.ComponentArray(ps), st)[1]) == (6,)
 
+    return Zygote.gradient(p -> sum(lnn(u0, p,st)[1]), ps)
+    #@test ! iszero(Zygote.forward_jacobian(p -> sum(lnn(u0, p,st)[1]), ps))
+
+end
+
+main()
 
 # Test Convergence on a toy problem
 t = range(0.0f0, 1.0f0, length = 64)

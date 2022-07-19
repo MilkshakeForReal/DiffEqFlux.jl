@@ -4,16 +4,31 @@ struct LagrangianNN{M} <: Lux.AbstractExplicitContainerLayer{(:nn,)}
     LagrangianNN(m::Lux.AbstractExplicitLayer) = new{typeof(m)}(m)
 end
 
-using ReverseDiff
+import Zygote: seed
+using ComponentArrays
+using ForwardDiff: Dual
+function seed(x::ComponentArray, ::Val{N}, offset = 0) where N
+    dual = map(x, reshape(1:length(x), size(x))) do x, i
+            Dual(x, ntuple(j -> j+offset == i, Val(N)))
+        end
+    return ComponentArray(dual, getaxes(x))
+end
+
+using FiniteDiff
+using StaticArrays
 function (lnn::LagrangianNN)(x::AbstractVector, ps, st)
+    #x = SVector{length(x),eltype(x)}(x)
+
     #grad_f(x) = FiniteDifferences.grad(central_fdm(5, 1), y -> sum(lnn.nn(y, ps, st)[1]), x)[1]
-    #grad_f(x) = gradient(y -> sum(lnn.nn(y, ps, st)[1]), x)[1]
-   # grad = grad_f(x)
+    grad_f = x -> gradient(y -> sum(lnn.nn(y, ps, st)[1]), x)[1]
+    grad = grad_f(x)
     #hess = FiniteDiff.finite_difference_jacobian(grad_f, x)
     #grad = FiniteDiff.finite_difference_jacobian(y -> sum(lnn.nn(y, ps, st)[1]), x)
-    grad = gradient(y -> sum(lnn.nn(y, ps, st)[1]), x)[1]
-    hess = hessian(y -> sum(lnn.nn(y, ps, st)[1]), x)
+    #grad = gradient(y -> sum(lnn.nn(y, ps, st)[1]), x)[1]
+    #hess = hessian(y -> sum(lnn.nn(y, ps, st)[1]), x)
     #hess = FiniteDiff.finite_difference_hessian(y -> sum(lnn.nn(y, ps, st)[1]), x).data
+    #hess = FiniteDiff.finite_difference_jacobian(grad_f, x)
+    hess = rand(size(x,1), size(x,1))
     #hess = hessian(y -> sum(lnn.nn(y, ps, st)[1]), x)
 
     m = size(x, 1) ÷ 2
@@ -23,7 +38,7 @@ function (lnn::LagrangianNN)(x::AbstractVector, ps, st)
     return [q_t; q_tt], st
 end
 
-function (lnn::LagrangianNN)(x, ps, st)
+]function (lnn::LagrangianNN)(x, ps, st)
     ps = NamedTuple(ps)
 
     grad = gradient(x -> sum(lnn.nn(x, ps, st)[1]), x)[1]
