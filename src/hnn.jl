@@ -33,7 +33,7 @@ References:
 [1] Greydanus, Samuel, Misko Dzamba, and Jason Yosinski. "Hamiltonian Neural Networks." Advances in Neural Information Processing Systems 32 (2019): 15379-15389.
 
 """
-struct HamiltonianNN{M, R, P}
+struct HamiltonianNN{M, R, P} <: Lux.AbstractExplicitContainerLayer{(:model,)}
     model::M
     re::R
     p::P
@@ -47,6 +47,11 @@ struct HamiltonianNN{M, R, P}
     end
 
     function HamiltonianNN(model::FastChain; p = initial_params(model))
+        re = nothing
+        return new{typeof(model), typeof(re), typeof(p)}(model, re, p)
+    end
+
+    function HamiltonianNN(model::Lux.AbstractExplicitLayer; p = nothing)
         re = nothing
         return new{typeof(model), typeof(re), typeof(p)}(model, re, p)
     end
@@ -66,10 +71,19 @@ function _hamiltonian_forward(m::FastChain, p, x)
     return cat(H[(n + 1):2n, :], -H[1:n, :], dims=1)
 end
 
+function _hamiltonian_forward(m::Lux.AbstractExplicitLayer, x, p, st)
+    H = FiniteDiff.finite_difference_gradient(x -> sum(first(m(x, p, st))), x) # mutating?
+    n = size(x, 1) ÷ 2
+    return cat(H[(n + 1):2n, :], -H[1:n, :], dims=1), st
+end
+
 (hnn::HamiltonianNN)(x, p = hnn.p) = _hamiltonian_forward(hnn.re, p, x)
 
 (hnn::HamiltonianNN{M})(x, p = hnn.p) where {M<:FastChain} =
     _hamiltonian_forward(hnn.model, p, x)
+
+(hnn::HamiltonianNN{M})(x,p,st) where {M<:Lux.AbstractExplicitLayer} =
+    _hamiltonian_forward(hnn.model, x, p, st)
 
 
 """
@@ -117,5 +131,16 @@ function (nhde::NeuralHamiltonianDE)(x, p = nhde.p)
     prob = ODEProblem(neural_hamiltonian!, x, nhde.tspan, p)
     # NOTE: Nesting Zygote is an issue. So we can't use ZygoteVJP
     sense = InterpolatingAdjoint(autojacvec = false)
+    solve(prob, nhde.args...; sensealg = sense, nhde.kwargs...)
+end
+
+function (nhde::NeuralHamiltonianDE{M})(x, p, st) where {M<:Lux.AbstractExplicitLayer}
+    function neural_hamiltonian(u, p, t; st = st)
+        u_, st = reshape(nhde.hnn(u, p, st), size(du))
+        return u_
+    end
+    prob = ODEProblem{false}(neural_hamiltonian, x, nhde.tspan, p)
+    # NOTE: ZygoteVJP can work with FiniteDiff
+    sense = InterpolatingAdjoint(autojacvec = ZygoteVJP())
     solve(prob, nhde.args...; sensealg = sense, nhde.kwargs...)
 end
